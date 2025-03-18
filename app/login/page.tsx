@@ -1,51 +1,54 @@
+// movie-frontend/app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useContext } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { AuthContext } from '../context/AuthContext';
 
 export default function LoginPage() {
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Logging in with:', { email, password });
-    // Your authentication logic here
+    try {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, { email, password });
+      login(res.data.token);
+      router.push('/');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 flex items-center justify-center">
-      <div className="w-full max-w-md bg-white p-6 rounded shadow-md mx-4">
-        <h1 className="text-2xl font-bold text-blue-900 mb-6 text-center">Login</h1>
-        <form onSubmit={handleLogin} className="flex flex-col space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="bg-yellow-500 text-blue-900 px-6 py-2 rounded hover:bg-yellow-600 transition-colors font-semibold"
-          >
-            Login
-          </button>
-        </form>
-        <p className="mt-4 text-center text-gray-700">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-yellow-500 hover:underline">
-            Register
-          </Link>
-        </p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md">
+        <h2 className="text-2xl font-bold mb-4">Login</h2>
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="border p-2 mb-4 w-full"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="border p-2 mb-4 w-full"
+          required
+        />
+        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
+          Login
+        </button>
+      </form>
     </div>
   );
 }

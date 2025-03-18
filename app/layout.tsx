@@ -1,21 +1,16 @@
+// movie-frontend/app/layout.tsx
 import './globals.css';
-import NavBar from './components/NavBar'; // Adjust path if needed
+import NavBar from './components/NavBar';
+import { AuthProvider } from './context/AuthContext';
 
-export const metadata = {
-  title: 'Movie DB',
-  description: 'Discover, rate, and get AI-Powered recommendations.',
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <NavBar />
-        {children}
+      <body className="bg-gray-50 min-h-screen">
+        <AuthProvider>
+          <NavBar />
+          <main>{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );

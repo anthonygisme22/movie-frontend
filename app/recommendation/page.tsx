@@ -1,60 +1,112 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+import Link from 'next/link';
+
+interface Recommendation {
+  title: string;
+  posterPath: string;
+  reason: string;
+}
 
 export default function RecommendationPage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<string[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[] | string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
+
+  const fetchRecommendations = async (prompt?: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      // Call the structured recommendations endpoint
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/structured`;
+      if (prompt && prompt.trim() !== "") {
+        url += `?prompt=${encodeURIComponent(prompt.trim())}`;
+      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const res = await axios.get(url, { headers });
+      setRecommendations(res.data.recommendations);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error fetching recommendations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    // Simulated recommendation results
-    const simulated = [
-      `Recommended movie based on "${query}"`,
-      'Example Movie 1',
-      'Example Movie 2',
-    ];
-    setResults(simulated);
-    setQuery('');
+    fetchRecommendations(customPrompt);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 flex items-center justify-center py-10 px-4">
-      {/* White card in center */}
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4 text-center">
-          Movie Recommendations
-        </h1>
-        <p className="text-center text-gray-700 mb-6">
-          Describe what kind of movie you're looking for and we'll suggest something!
-        </p>
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-          <textarea
-            className="border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-800"
-            rows={4}
-            placeholder="Describe what kind of movie you're looking for..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="bg-yellow-500 text-blue-900 px-6 py-2 rounded hover:bg-yellow-600 transition-colors font-semibold"
-          >
-            Get Recommendations
-          </button>
-        </form>
-        {results.length > 0 && (
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-2 text-blue-900">Your Recommendations</h2>
-            <ul className="list-disc list-inside space-y-1 text-gray-800">
-              {results.map((r, idx) => (
-                <li key={idx}>{r}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+    <div className="min-h-screen bg-blue-700 text-white p-6">
+      <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">
+        Movie Recommendations
+      </h1>
+      <form onSubmit={handleSubmit} className="mb-6 flex justify-center">
+        <input
+          type="text"
+          placeholder="Ask AI for movie recommendations..."
+          value={customPrompt}
+          onChange={(e) => setCustomPrompt(e.target.value)}
+          className="px-4 py-2 rounded-l text-black w-80"
+        />
+        <button
+          type="submit"
+          className="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-r hover:bg-yellow-300 transition-colors"
+        >
+          Ask
+        </button>
+      </form>
+      {loading ? (
+        <p className="text-center text-xl">Loading recommendations...</p>
+      ) : error ? (
+        <p className="text-center text-red-400 text-xl">{error}</p>
+      ) : Array.isArray(recommendations) ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendations.map((rec, index) => (
+            <div key={index} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
+              {rec.posterPath ? (
+                <img
+                  src={rec.posterPath}
+                  alt={rec.title}
+                  className="w-full h-64 object-cover mb-4 rounded"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.src = "/no-image.png";
+                  }}
+                />
+              ) : (
+                <div className="w-full h-64 flex items-center justify-center bg-gray-800 mb-4 rounded">
+                  <span className="text-gray-300">No Image</span>
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-yellow-400 mb-2">{rec.title}</h2>
+              <p className="text-sm text-gray-200 mb-2">{rec.reason}</p>
+              <Link
+                href={`/movies/tmdb/${rec.title}`}
+                className="inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
+              >
+                View Details
+              </Link>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="max-w-2xl mx-auto whitespace-pre-line text-lg text-gray-200">
+          {recommendations}
+        </div>
+      )}
     </div>
   );
 }
