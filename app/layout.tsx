@@ -1,13 +1,9 @@
-// app/layout.tsx
 import './globals.css';
-import { Inter } from 'next/font/google';
-import NavBar from './components/NavBar';
-
-const inter = Inter({ subsets: ['latin'] });
+import NavBar from './components/NavBar'; // Adjust path if needed
 
 export const metadata = {
-  title: 'Movie App',
-  description: 'Your movie recommendation app',
+  title: 'Movie DB',
+  description: 'Discover, rate, and get AI-Powered recommendations.',
 };
 
 export default function RootLayout({
@@ -17,9 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <NavBar />
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );
