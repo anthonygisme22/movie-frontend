@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AuthContext } from '../../../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 
 interface TMDbMovie {
   id: number;
