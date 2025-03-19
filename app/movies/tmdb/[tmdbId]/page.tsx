@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useState, useRef, FormEvent, useContext } from 'react';
@@ -39,7 +40,14 @@ interface Credits {
 
 export default function TMDbMovieDetailPage() {
   const { tmdbId } = useParams();
-  const { user } = useContext(AuthContext);
+  const authContext = useContext(AuthContext);
+  interface User {
+    id: number;
+    name: string;
+    email: string;
+    // Add other fields as needed
+  }
+  const user = authContext?.user as User | null;
 
   const [tmdbData, setTmdbData] = useState<TMDbMovie | null>(null);
   const [similarMovies, setSimilarMovies] = useState<TMDbMovie[]>([]);
