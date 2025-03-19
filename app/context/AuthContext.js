@@ -4,11 +4,11 @@ import React, { createContext, useState, useEffect } from 'react';
 
 export const AuthContext = createContext({
   user: null,
-  login: (token: string) => {},
+  login: (token) => {},
   logout: () => {},
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   // On initial load, check for token in localStorage
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const login = (token: string) => {
+  const login = (token) => {
     localStorage.setItem('token', token);
     setUser({ token });
   };
