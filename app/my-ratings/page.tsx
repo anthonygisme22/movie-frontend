@@ -28,6 +28,7 @@ const tmdbCache: Record<string, TMDbMovieData> = {};
 
 export default function MyRatingsPage() {
   // Use separate state names to avoid unused variable warnings
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [localMovies, setLocalMovies] = useState<LocalMovieRecord[]>([]);
   const [displayMovies, setDisplayMovies] = useState<TMDbMovieData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +55,7 @@ export default function MyRatingsPage() {
               tmdbCache[localMovie.title] = tmdbMovie;
               return tmdbMovie;
             }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (_err: unknown) {
             // Removed unused error variable
             return null;

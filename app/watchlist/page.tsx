@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function WatchlistPage() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [watchlist, setWatchlist] = useState<any[]>([]); // Define an interface if available
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

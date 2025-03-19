@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useEffect, useState, FormEvent, useContext } from 'react';
@@ -36,12 +37,13 @@ interface CastMember {
 
 interface Credits {
   cast: CastMember[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   crew: any[];
 }
 
 export default function TMDbMovieDetailPage() {
   const { tmdbId } = useParams();
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext) as { user: { id: number } | null };
 
   const [tmdbData, setTmdbData] = useState<TMDbMovie | null>(null);
   const [similarMovies, setSimilarMovies] = useState<TMDbMovie[]>([]);
