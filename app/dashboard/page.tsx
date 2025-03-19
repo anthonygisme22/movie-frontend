@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
-// Removed unused import: Link from 'next/link'
+// Removed unused Link import.
 import { AuthContext } from '../context/AuthContext';
 
 interface UserProfile {
@@ -16,6 +16,8 @@ interface Recommendation {
   posterPath: string;
   reason: string;
 }
+
+// initialFeatured is now not used in this file since Dashboard fetches data from the API.
 
 export default function DashboardPage() {
   const { user } = useContext(AuthContext);
@@ -35,15 +37,17 @@ export default function DashboardPage() {
         }
 
         // Fetch Profile Data
-        const profileRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const profileRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         setProfile(profileRes.data.user);
 
         // Fetch AI Recommendations
-        const recommendationsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/dashboard-ai`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const recommendationsRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/dashboard-ai`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         setRecommendations(recommendationsRes.data.recommendations);
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
@@ -73,23 +77,30 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto">
           {profile && (
             <div className="mb-8 bg-blue-800 p-4 rounded shadow">
-              <h2 className="text-2xl font-bold text-yellow-400">Welcome, {profile.username}!</h2>
+              <h2 className="text-2xl font-bold text-yellow-400">
+                Welcome, {profile.username}!
+              </h2>
               <p className="mt-2">Email: {profile.email}</p>
             </div>
           )}
 
           {/* AI Recommendations */}
           <div className="bg-blue-800 p-4 rounded shadow">
-            <h2 className="text-2xl font-bold text-yellow-400 mb-4">AI-Powered Movie Recommendations</h2>
+            <h2 className="text-2xl font-bold text-yellow-400 mb-4">
+              AI-Powered Movie Recommendations
+            </h2>
             {recommendations.length === 0 ? (
-              <p className="text-gray-300">No AI recommendations available yet.</p>
+              <p className="text-gray-300">
+                No AI recommendations available yet.
+              </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {recommendations.map((rec, index) => (
                   <div key={index} className="bg-blue-900 p-3 rounded shadow">
-                    {/* If you need to display images, consider using <Image /> */}
-                    {/* For now, if no image is available, you might not display one */}
-                    <p className="text-xl font-bold text-yellow-400 mt-2">{rec.title}</p>
+                    {/* If you want to display an image, replace this with <Image /> */}
+                    <p className="text-xl font-bold text-yellow-400 mt-2">
+                      {rec.title}
+                    </p>
                     <p className="text-gray-200">{rec.reason}</p>
                   </div>
                 ))}

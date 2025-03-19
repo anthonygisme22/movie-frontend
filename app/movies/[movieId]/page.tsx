@@ -8,21 +8,26 @@ import Image from 'next/image';
 
 export default function MovieDetailPage() {
   const { movieId } = useParams();
-  const [movie, setMovie] = useState<any>(null); // Ideally, define an interface
+  // Ideally, define an interface instead of any
+  const [movie, setMovie] = useState<any>(null);
   const [tmdbData, setTmdbData] = useState<any>(null);
 
   useEffect(() => {
     if (!movieId) return;
-    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/${movieId}`)
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/${movieId}`)
       .then((response) => {
         setMovie(response.data);
         if (response.data.tmdbId) {
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${response.data.tmdbId}`)
+          axios
+            .get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${response.data.tmdbId}`)
             .then((tmdbResponse) => setTmdbData(tmdbResponse.data))
-            .catch((error) => console.error("Error fetching TMDb data:", error));
+            .catch((error) =>
+              console.error('Error fetching TMDb data:', error)
+            );
         }
       })
-      .catch((error) => console.error("Error fetching movie details:", error));
+      .catch((error) => console.error('Error fetching movie details:', error));
   }, [movieId]);
 
   if (!movie) {
@@ -36,9 +41,15 @@ export default function MovieDetailPage() {
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow rounded">
       <h1 className="text-4xl font-bold text-blue-700 mb-4">{movie.title}</h1>
-      <p className="text-gray-700 mb-2"><span className="font-semibold">Year:</span> {movie.year}</p>
-      <p className="text-gray-700 mb-2"><span className="font-semibold">Rating:</span> {movie.rating}</p>
-      <p className="text-gray-700 mb-4"><span className="font-semibold">BakedScale:</span> {movie.bakedscale}</p>
+      <p className="text-gray-700 mb-2">
+        <span className="font-semibold">Year:</span> {movie.year}
+      </p>
+      <p className="text-gray-700 mb-2">
+        <span className="font-semibold">Rating:</span> {movie.rating}
+      </p>
+      <p className="text-gray-700 mb-4">
+        <span className="font-semibold">BakedScale:</span> {movie.bakedscale}
+      </p>
       {tmdbData && (
         <div className="mt-6">
           <Image
@@ -48,9 +59,12 @@ export default function MovieDetailPage() {
             height={700}
             className="w-full rounded shadow mb-4"
           />
-          <p className="text-gray-700 mb-2"><span className="font-semibold">Overview:</span> {tmdbData.overview}</p>
+          <p className="text-gray-700 mb-2">
+            <span className="font-semibold">Overview:</span> {tmdbData.overview}
+          </p>
           <p className="text-gray-700">
-            <span className="font-semibold">Genres:</span> {tmdbData.genres.map((g: { name: string }) => g.name).join(", ")}
+            <span className="font-semibold">Genres:</span>{' '}
+            {tmdbData.genres.map((g: { name: string }) => g.name).join(', ')}
           </p>
         </div>
       )}
