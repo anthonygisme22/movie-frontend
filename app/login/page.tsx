@@ -1,4 +1,3 @@
-// movie-frontend/app/login/page.tsx
 'use client';
 
 import { useState, useContext } from 'react';
@@ -19,8 +18,12 @@ export default function LoginPage() {
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, { email, password });
       login(res.data.token);
       router.push('/');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Login failed');
+      } else {
+        setError('Login failed');
+      }
     }
   };
 
@@ -34,7 +37,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 mb-4 w-full"
+          className="w-full p-3 mb-4 rounded text-black border"
           required
         />
         <input
@@ -42,7 +45,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 mb-4 w-full"
+          className="w-full p-3 mb-4 rounded text-black border"
           required
         />
         <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">

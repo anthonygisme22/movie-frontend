@@ -3,33 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import axios from 'axios';
-
-interface Movie {
-  id: number;
-  title: string;
-  year: number;
-  rating: number;
-  bakedscale: string;
-  tmdbId?: number;
-}
-
-interface TMDbMovie {
-  poster_path: string;
-  overview: string;
-  genres: { name: string }[];
-}
+import Link from 'next/link';
+import Image from 'next/image';
 
 export default function MovieDetailPage() {
   const { movieId } = useParams();
-  const [movie, setMovie] = useState<Movie | null>(null);
-  const [tmdbData, setTmdbData] = useState<TMDbMovie | null>(null);
+  const [movie, setMovie] = useState<any>(null); // Ideally, define an interface
+  const [tmdbData, setTmdbData] = useState<any>(null);
 
   useEffect(() => {
     if (!movieId) return;
     axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/${movieId}`)
       .then((response) => {
         setMovie(response.data);
-        // If the movie has a TMDb ID, fetch details from TMDb
         if (response.data.tmdbId) {
           axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${response.data.tmdbId}`)
             .then((tmdbResponse) => setTmdbData(tmdbResponse.data))
@@ -55,18 +41,25 @@ export default function MovieDetailPage() {
       <p className="text-gray-700 mb-4"><span className="font-semibold">BakedScale:</span> {movie.bakedscale}</p>
       {tmdbData && (
         <div className="mt-6">
-          <img
+          <Image
             src={`https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`}
             alt={movie.title}
+            width={500}
+            height={700}
             className="w-full rounded shadow mb-4"
           />
           <p className="text-gray-700 mb-2"><span className="font-semibold">Overview:</span> {tmdbData.overview}</p>
           <p className="text-gray-700">
-            <span className="font-semibold">Genres:</span>{" "}
-            {tmdbData.genres.map(genre => genre.name).join(", ")}
+            <span className="font-semibold">Genres:</span> {tmdbData.genres.map((g: { name: string }) => g.name).join(", ")}
           </p>
         </div>
       )}
+      <Link
+        href="/"
+        className="mt-4 inline-block bg-yellow-400 text-black px-4 py-2 rounded hover:bg-yellow-300 transition-colors"
+      >
+        Back to Home
+      </Link>
     </div>
   );
 }

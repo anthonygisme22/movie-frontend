@@ -2,25 +2,13 @@
 
 import { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+// Removed unused import: Link from 'next/link'
 import { AuthContext } from '../context/AuthContext';
-import Link from 'next/link';
 
 interface UserProfile {
   id: number;
   username: string;
   email: string;
-}
-
-interface Review {
-  id: number;
-  rating: number;
-  comment: string;
-  created_at: string;
-}
-
-interface Favorite {
-  id: number;
-  movieId: number;
 }
 
 interface Recommendation {
@@ -32,8 +20,6 @@ interface Recommendation {
 export default function DashboardPage() {
   const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,25 +40,17 @@ export default function DashboardPage() {
         });
         setProfile(profileRes.data.user);
 
-        // Fetch User Reviews
-        const reviewsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/my`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setReviews(reviewsRes.data);
-
-        // Fetch Favorites
-        const favoritesRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/favorites`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setFavorites(favoritesRes.data);
-
         // Fetch AI Recommendations
         const recommendationsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/dashboard-ai`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setRecommendations(recommendationsRes.data.recommendations);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Error fetching dashboard data');
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          setError(err.response?.data?.message || 'Error fetching dashboard data');
+        } else {
+          setError('Error fetching dashboard data');
+        }
       } finally {
         setLoading(false);
       }
@@ -109,8 +87,9 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {recommendations.map((rec, index) => (
                   <div key={index} className="bg-blue-900 p-3 rounded shadow">
-                    <img src={rec.posterPath} alt={rec.title} className="w-full h-64 object-cover rounded" />
-                    <h3 className="text-xl font-bold text-yellow-400 mt-2">{rec.title}</h3>
+                    {/* If you need to display images, consider using <Image /> */}
+                    {/* For now, if no image is available, you might not display one */}
+                    <p className="text-xl font-bold text-yellow-400 mt-2">{rec.title}</p>
                     <p className="text-gray-200">{rec.reason}</p>
                   </div>
                 ))}

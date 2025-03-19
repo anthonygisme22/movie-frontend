@@ -2,29 +2,46 @@
 
 import { useEffect, useState, ChangeEvent } from 'react';
 import axios from 'axios';
+import Image from 'next/image';
 import Link from 'next/link';
 
-export default function AllMoviesPage() {
-  const [movies, setMovies] = useState([]);
-  const [filteredMovies, setFilteredMovies] = useState([]);
+interface Movie {
+  id: number;
+  title: string;
+  year: number;
+  rating: number;
+  bakedscale: string;
+  imageUrl: string;
+}
+
+export default function MoviesPage() {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [filteredMovies, setFilteredMovies] = useState<Movie[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`)
-      .then(response => {
-        const data = response.data.map(movie => {
-          // Use the provided imageUrl or fallback to a placeholder
-          const url = movie.imageUrl ? movie.imageUrl : 'https://via.placeholder.com/300x400?text=No+Image';
-          console.log('Movie:', movie.title, 'Image URL:', url);
-          return { ...movie, imageUrl: url };
+    async function fetchMovies() {
+      setLoading(true);
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`);
+        const data = res.data.map((movie: Movie) => {
+          // Use imageUrl if available, else fallback to placeholder
+          return {
+            ...movie,
+            imageUrl: movie.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image',
+          };
         });
         setMovies(data);
         setFilteredMovies(data);
-      })
-      .catch(error => {
-        console.error("Error fetching movies:", error);
-      });
+      } catch {
+        setError('Error fetching movies');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMovies();
   }, []);
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -34,12 +51,25 @@ export default function AllMoviesPage() {
       setFilteredMovies(movies);
     } else {
       const lowerTerm = term.toLowerCase();
-      const filtered = movies.filter(movie =>
-        movie.title.toLowerCase().includes(lowerTerm)
-      );
-      setFilteredMovies(filtered);
+      setFilteredMovies(movies.filter(movie => movie.title.toLowerCase().includes(lowerTerm)));
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <p>Loading movies...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -59,18 +89,14 @@ export default function AllMoviesPage() {
             key={movie.id}
             className="bg-white p-4 rounded shadow hover:shadow-lg transition-shadow"
           >
-            <img
+            <Image
               src={movie.imageUrl}
               alt={movie.title}
+              width={400}
+              height={600}
               className="w-full h-64 object-cover mb-4 rounded"
-              onError={(e) => {
-                // If image fails to load, set src to the fallback placeholder
-                e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
-              }}
             />
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              {movie.title}
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">{movie.title}</h2>
             <p className="text-gray-600">Year: {movie.year}</p>
             <p className="text-gray-600">Rating: {movie.rating}</p>
             <p className="text-gray-600">BakedScale: {movie.bakedscale}</p>

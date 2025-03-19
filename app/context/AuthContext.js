@@ -1,15 +1,14 @@
-// movie-frontend/app/context/AuthContext.js
 'use client';
 
 import React, { createContext, useState, useEffect } from 'react';
 
 export const AuthContext = createContext({
   user: null,
-  login: (token) => {},
+  login: (token: string) => {},
   logout: () => {},
 });
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState(null);
 
   // On initial load, check for token in localStorage
@@ -21,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = (token) => {
+  const login = (token: string) => {
     localStorage.setItem('token', token);
     setUser({ token });
   };
