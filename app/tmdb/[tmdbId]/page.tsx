@@ -57,7 +57,6 @@ export default function TMDbMovieDetailPage() {
   const [editRating, setEditRating] = useState<number>(0);
   const [editComment, setEditComment] = useState('');
 
-  // Fetch movie details
   useEffect(() => {
     if (!tmdbId) return;
     axios
@@ -85,7 +84,6 @@ export default function TMDbMovieDetailPage() {
       .then((res) => {
         const videos = res.data.results;
         const trailer = videos.find((video: unknown) => {
-          // We assume video has shape with site and type; cast as any minimally here:
           const v = video as { site: string; type: string; key: string };
           return v.site === 'YouTube' && v.type === 'Trailer';
         });

@@ -1,79 +1,78 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import Link from 'next/link';
-
-interface WatchlistMovie {
-  tmdbId: number;
-  title: string;
-  poster_path: string | null;
-  release_date?: string;
-  vote_average?: number;
-}
+import Image from 'next/image';
 
 export default function WatchlistPage() {
-  const [watchlist, setWatchlist] = useState<WatchlistMovie[]>([]);
+  const [watchlist, setWatchlist] = useState<any[]>([]); // Define an interface if available
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('watchlist');
-    if (stored) {
-      setWatchlist(JSON.parse(stored));
+    async function fetchWatchlist() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('You must be logged in to view your watchlist.');
+          setLoading(false);
+          return;
+        }
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/watchlist`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setWatchlist(res.data);
+      } catch {
+        setError('Error fetching watchlist');
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchWatchlist();
   }, []);
 
-  const removeFromWatchlist = (tmdbId: number) => {
-    const updated = watchlist.filter((movie) => movie.tmdbId !== tmdbId);
-    setWatchlist(updated);
-    localStorage.setItem('watchlist', JSON.stringify(updated));
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-blue-700 text-white p-6 flex items-center justify-center">
+        <p>Loading watchlist...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-blue-700 text-white p-6 flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-blue-100 p-6">
-      <h1 className="text-4xl font-bold text-blue-900 mb-6 text-center">My Watchlist</h1>
+    <div className="min-h-screen bg-blue-700 text-white p-6">
+      <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">My Watchlist</h1>
       {watchlist.length === 0 ? (
-        <p className="text-center text-gray-700">Your watchlist is empty.</p>
+        <p className="text-center text-gray-300">No movies in your watchlist.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {watchlist.map((movie, index) => {
-            const posterUrl = movie.poster_path
-              ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-              : '/no-image.png';
+          {watchlist.map((item) => {
+            const posterUrl = item.posterUrl || '/no-image.png';
             return (
-              <div
-                key={`watchlist-${movie.tmdbId}-${index}`}
-                className="bg-white p-4 rounded shadow"
-              >
-                <img
+              <div key={item.id} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
+                <Image
                   src={posterUrl}
-                  alt={movie.title}
+                  alt={item.title}
+                  width={400}
+                  height={600}
                   className="w-full h-64 object-cover mb-4 rounded"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/no-image.png';
-                  }}
                 />
-                <h2 className="text-xl font-semibold mb-2 text-gray-800">{movie.title}</h2>
-                {movie.release_date && (
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-semibold">Release:</span> {movie.release_date}
-                  </p>
-                )}
-                {movie.vote_average !== undefined && (
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-semibold">TMDb Rating:</span> {movie.vote_average}
-                  </p>
-                )}
+                <h2 className="text-xl font-semibold text-white mb-2">{item.title}</h2>
                 <Link
-                  href={`/movies/tmdb/${movie.tmdbId}`}
-                  className="text-blue-800 hover:underline mb-2 inline-block"
+                  href={`/movies/${item.id}`}
+                  className="mt-3 inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
                 >
                   View Details
                 </Link>
-                <button
-                  onClick={() => removeFromWatchlist(movie.tmdbId)}
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors font-semibold"
-                >
-                  Remove
-                </button>
               </div>
             );
           })}

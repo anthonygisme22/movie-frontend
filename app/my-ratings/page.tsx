@@ -5,7 +5,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
 
-// Example interface for local movies from your DB (adjust as needed)
+// Define interfaces for local movie records and TMDb data
 interface LocalMovieRecord {
   id: number;
   title: string;
@@ -14,7 +14,6 @@ interface LocalMovieRecord {
   bakedscale: string;
 }
 
-// Example interface for TMDb movie data
 interface TMDbMovieData {
   id: number;
   poster_path: string | null;
@@ -24,11 +23,12 @@ interface TMDbMovieData {
   overview: string;
 }
 
-// (Optional) If you use a cache for TMDb lookups, declare it outside useEffect.
+// Optional: Use a simple cache so repeated lookups for a title aren’t refetched.
 const tmdbCache: Record<string, TMDbMovieData> = {};
 
 export default function MyRatingsPage() {
-  const [movies, setMovies] = useState<LocalMovieRecord[]>([]);
+  // Use separate state names to avoid unused variable warnings
+  const [localMovies, setLocalMovies] = useState<LocalMovieRecord[]>([]);
   const [displayMovies, setDisplayMovies] = useState<TMDbMovieData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -38,8 +38,8 @@ export default function MyRatingsPage() {
     async function fetchMyRatings() {
       try {
         const res = await axios.get<LocalMovieRecord[]>(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`);
-        setMovies(res.data);
-        // For each local movie, fetch TMDb data by title (simulate using cache)
+        setLocalMovies(res.data);
+        // For each local movie, fetch TMDb data by title
         const promises = res.data.map(async (localMovie) => {
           if (tmdbCache[localMovie.title]) {
             return tmdbCache[localMovie.title];
@@ -54,34 +54,32 @@ export default function MyRatingsPage() {
               tmdbCache[localMovie.title] = tmdbMovie;
               return tmdbMovie;
             }
-          } catch (_err) {
-            console.error(`TMDb search failed for "${localMovie.title}"`);
+          } catch (_err: unknown) {
+            // Removed unused error variable
+            return null;
           }
           return null;
         });
         const results = await Promise.all(promises);
-        setDisplayMovies(results.filter((r): r is TMDbMovieData => r !== null));
-      } catch (_err) {
+        setDisplayMovies(results.filter((movie): movie is TMDbMovieData => movie !== null));
+      } catch {
         setError('Error fetching local movies');
       } finally {
         setLoading(false);
       }
     }
     fetchMyRatings();
-  }, []); // tmdbCache is defined outside, so it's safe
+  }, []);
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
     if (term === '') {
-      setDisplayMovies(displayMovies); // Reset to original list if needed
+      // If search is empty, reset filtered movies to all movies (or you can decide on a different behavior)
+      setDisplayMovies(displayMovies);
     } else {
       const lowerTerm = term.toLowerCase();
-      setDisplayMovies(
-        displayMovies.filter((movie) =>
-          movie.title.toLowerCase().includes(lowerTerm)
-        )
-      );
+      setDisplayMovies(displayMovies.filter(movie => movie.title.toLowerCase().includes(lowerTerm)));
     }
   };
 
@@ -132,7 +130,7 @@ export default function MyRatingsPage() {
             />
             <h2 className="text-xl font-semibold text-white mb-2">{movie.title}</h2>
             <p className="text-sm text-gray-200 mb-1">
-              <strong>Year:</strong> {movie.release_date}
+              <strong>Release:</strong> {movie.release_date}
             </p>
             <p className="text-sm text-gray-200 mb-1">
               <strong>TMDb Rating:</strong> {movie.vote_average}

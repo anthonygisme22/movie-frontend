@@ -59,7 +59,6 @@ export default function ProfilePage() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const favRecords: FavoriteRecord[] = favRes.data;
-
         const moviePromises = favRecords.map(async (fav) => {
           try {
             const res = await axios.get(
@@ -73,7 +72,7 @@ export default function ProfilePage() {
         const results = await Promise.all(moviePromises);
         const validMovies = results.filter((m): m is TMDbMovie => m !== null);
         setFavorites(validMovies);
-      } catch (_err) {
+      } catch {
         setError('Error fetching data');
       }
     }
@@ -100,7 +99,7 @@ export default function ProfilePage() {
       setProfile(res.data.user);
       setEditing(false);
       setRefresh(!refresh);
-    } catch (_err) {
+    } catch {
       setError('Error updating profile');
     }
   };
@@ -182,19 +181,26 @@ export default function ProfilePage() {
                     className="w-full h-64 object-cover mb-4 rounded"
                   />
                   <h3 className="text-xl font-semibold text-gray-800 mb-2">{movie.title}</h3>
-                  <p className="mb-1"><strong>Release:</strong> {movie.release_date}</p>
-                  <p className="mb-1"><strong>Rating:</strong> {movie.vote_average}</p>
+                  <p className="mb-1">
+                    <strong>Release:</strong> {movie.release_date}
+                  </p>
+                  <p className="mb-1">
+                    <strong>Rating:</strong> {movie.vote_average}
+                  </p>
                   <p className="mb-1 line-clamp-3">{movie.overview}</p>
-                  <Link href={`/movies/tmdb/${movie.id}`} className="mt-3 inline-block text-yellow-400 hover:underline">
+                  <Link
+                    href={`/movies/tmdb/${movie.id}`}
+                    className="mt-3 inline-block text-yellow-400 hover:underline"
+                  >
                     View Details
                   </Link>
                 </div>
               ))}
             </div>
           )}
-          {error && <p className="mt-4 text-red-400">{error}</p>}
         </>
       )}
+      {error && <p className="mt-4 text-red-400">{error}</p>}
     </div>
   );
 }
