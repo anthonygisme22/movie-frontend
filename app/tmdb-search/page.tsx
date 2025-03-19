@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,7 +20,7 @@ interface SearchResponse {
   results: TMDbMovie[];
 }
 
-export default function TMDbSearchPage() {
+function TMDbSearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
   const [movies, setMovies] = useState<TMDbMovie[]>([]);
@@ -115,5 +115,13 @@ export default function TMDbSearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TMDbSearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-blue-700 text-white p-6 text-center">Loading search results...</div>}>
+      <TMDbSearchContent />
+    </Suspense>
   );
 }
