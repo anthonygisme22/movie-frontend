@@ -42,8 +42,12 @@ export default function TMDbSearchPage() {
           { params: { query } }
         );
         setMovies(response.data.results);
-      } catch {
-        setError('Error performing search');
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          setError(err.message || 'Error performing search');
+        } else {
+          setError('An unexpected error occurred.');
+        }
       } finally {
         setLoading(false);
       }
@@ -61,7 +65,6 @@ export default function TMDbSearchPage() {
       ) : error ? (
         <p className="text-center text-red-400 text-xl">{error}</p>
       ) : movies.length === 0 && query.trim() !== '' ? (
-        // Escape quotes to fix react/no-unescaped-entities
         <p className="text-center text-gray-300">
           No movies found for &quot;{query}&quot;
         </p>
@@ -72,7 +75,6 @@ export default function TMDbSearchPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {movies.map((movie) => {
-            // Fallback if no poster_path
             const posterUrl = movie.poster_path
               ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
               : '/no-image.png';
