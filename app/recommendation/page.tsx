@@ -81,8 +81,11 @@ export default function RecommendationPage() {
       ) : Array.isArray(recommendations) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {recommendations.map((rec, index) => {
-            // If your AI returns rec.poster_path, use that. Or rename if needed:
-            const posterUrl = rec.poster_path || '/no-image.png';
+            // Use fallback if poster_path is null or empty
+            const posterUrl = rec.poster_path && rec.poster_path.trim() !== ''
+              ? rec.poster_path
+              : '/no-image.png';
+
             return (
               <div
                 key={index}
@@ -94,7 +97,6 @@ export default function RecommendationPage() {
                   width={500}
                   height={600}
                   className="w-full h-64 object-cover mb-4 rounded"
-                  onError={() => '/no-image.png'}
                 />
                 <h2 className="text-xl font-bold text-yellow-400 mb-2">{rec.title}</h2>
                 <p className="text-sm text-gray-200 mb-2">{rec.reason || ''}</p>

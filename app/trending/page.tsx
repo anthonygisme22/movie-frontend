@@ -31,7 +31,7 @@ export default function TrendingPage() {
           `${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/trending`
         );
         setMovies(response.data.results);
-      } catch (err) {
+      } catch {
         setError('Error fetching trending movies');
       } finally {
         setLoading(false);
@@ -67,6 +67,7 @@ export default function TrendingPage() {
             const posterUrl = movie.poster_path
               ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
               : '/no-image.png';
+
             return (
               <div
                 key={movie.id}
@@ -80,8 +81,12 @@ export default function TrendingPage() {
                   className="w-full h-64 object-cover mb-4 rounded"
                 />
                 <h2 className="text-xl font-bold text-white mb-2">{movie.title}</h2>
-                <p className="text-sm text-gray-200"><strong>Release:</strong> {movie.release_date}</p>
-                <p className="text-sm text-gray-200"><strong>TMDb Rating:</strong> {movie.vote_average}</p>
+                <p className="text-sm text-gray-200">
+                  <strong>Release:</strong> {movie.release_date}
+                </p>
+                <p className="text-sm text-gray-200">
+                  <strong>TMDb Rating:</strong> {movie.vote_average}
+                </p>
                 <p className="text-sm text-gray-200 line-clamp-3">{movie.overview}</p>
                 <Link
                   href={`/movies/tmdb/${movie.id}`}
