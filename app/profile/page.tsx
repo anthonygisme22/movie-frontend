@@ -2,9 +2,15 @@
 
 import { useContext, useEffect, useState, FormEvent } from 'react';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
 import Link from 'next/link';
 import { FaUserCircle } from 'react-icons/fa';
+import Image from 'next/image';
+import { AuthContext } from '../context/AuthContext';
+
+interface Profile {
+  username: string;
+  email: string;
+}
 
 interface TMDbMovie {
   id: number;
@@ -22,11 +28,10 @@ interface FavoriteRecord {
 
 export default function ProfilePage() {
   const { user } = useContext(AuthContext);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<TMDbMovie[]>([]);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
-  // Initialize with empty strings to keep inputs controlled
   const [editUsername, setEditUsername] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [refresh, setRefresh] = useState(false);
@@ -45,7 +50,6 @@ export default function ProfilePage() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setProfile(profileRes.data.user);
-        // Ensure controlled inputs always get a string
         setEditUsername(profileRes.data.user.username || '');
         setEditEmail(profileRes.data.user.email || '');
 
@@ -56,7 +60,6 @@ export default function ProfilePage() {
         );
         const favRecords: FavoriteRecord[] = favRes.data;
 
-        // For each favorite, fetch TMDb details
         const moviePromises = favRecords.map(async (fav) => {
           try {
             const res = await axios.get(
@@ -70,8 +73,8 @@ export default function ProfilePage() {
         const results = await Promise.all(moviePromises);
         const validMovies = results.filter((m): m is TMDbMovie => m !== null);
         setFavorites(validMovies);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Error fetching data');
+      } catch (_err) {
+        setError('Error fetching data');
       }
     }
 
@@ -97,8 +100,8 @@ export default function ProfilePage() {
       setProfile(res.data.user);
       setEditing(false);
       setRefresh(!refresh);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error updating profile');
+    } catch (_err) {
+      setError('Error updating profile');
     }
   };
 
@@ -112,9 +115,11 @@ export default function ProfilePage() {
             <FaUserCircle className="text-4xl text-yellow-400" />
             <div>
               <h1 className="text-3xl font-bold text-yellow-400 mb-1">
-                {profile.username}'s Profile
+                {profile.username}&apos;s Profile
               </h1>
-              <p><strong>Email:</strong> {profile.email}</p>
+              <p>
+                <strong>Email:</strong> {profile.email}
+              </p>
             </div>
             <button
               onClick={() => setEditing(!editing)}
@@ -165,27 +170,22 @@ export default function ProfilePage() {
                   key={movie.id}
                   className="bg-gray-800 p-4 rounded shadow hover:shadow-lg transition-shadow"
                 >
-                  <img
+                  <Image
                     src={
                       movie.poster_path
                         ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
                         : '/no-image.png'
                     }
                     alt={movie.title}
+                    width={400}
+                    height={600}
                     className="w-full h-64 object-cover mb-4 rounded"
-                    onError={(e) => {
-                      const target = e.currentTarget as HTMLImageElement;
-                      target.src = '/no-image.png';
-                    }}
                   />
-                  <h3 className="text-xl font-semibold mb-2">{movie.title}</h3>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">{movie.title}</h3>
                   <p className="mb-1"><strong>Release:</strong> {movie.release_date}</p>
                   <p className="mb-1"><strong>Rating:</strong> {movie.vote_average}</p>
                   <p className="mb-1 line-clamp-3">{movie.overview}</p>
-                  <Link
-                    href={`/movies/tmdb/${movie.id}`}
-                    className="mt-3 inline-block text-yellow-400 hover:text-yellow-300"
-                  >
+                  <Link href={`/movies/tmdb/${movie.id}`} className="mt-3 inline-block text-yellow-400 hover:underline">
                     View Details
                   </Link>
                 </div>

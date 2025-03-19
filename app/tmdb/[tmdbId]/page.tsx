@@ -15,7 +15,7 @@ interface TMDbMovie {
   overview: string;
   release_date: string;
   vote_average: number;
-  [key: string]: unknown; // fallback for any extra fields
+  [key: string]: unknown;
 }
 
 interface Review {
@@ -57,13 +57,15 @@ export default function TMDbMovieDetailPage() {
   const [editRating, setEditRating] = useState<number>(0);
   const [editComment, setEditComment] = useState('');
 
-  // Fetch data
+  // Fetch movie details
   useEffect(() => {
     if (!tmdbId) return;
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${tmdbId}`)
       .then((res) => setTmdbData(res.data))
-      .catch((err) => console.error('Error fetching TMDb movie details:', err));
+      .catch((_err: unknown) =>
+        console.error('Error fetching TMDb movie details:', _err)
+      );
   }, [tmdbId]);
 
   useEffect(() => {
@@ -71,7 +73,9 @@ export default function TMDbMovieDetailPage() {
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${tmdbId}/similar`)
       .then((res) => setSimilarMovies(res.data.results))
-      .catch((err) => console.error('Error fetching similar movies:', err));
+      .catch((_err: unknown) =>
+        console.error('Error fetching similar movies:', _err)
+      );
   }, [tmdbId]);
 
   useEffect(() => {
@@ -80,10 +84,16 @@ export default function TMDbMovieDetailPage() {
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${tmdbId}/videos`)
       .then((res) => {
         const videos = res.data.results;
-        const trailer = videos.find((video: any) => video.site === 'YouTube' && video.type === 'Trailer');
-        if (trailer) setTrailerKey(trailer.key);
+        const trailer = videos.find((video: unknown) => {
+          // We assume video has shape with site and type; cast as any minimally here:
+          const v = video as { site: string; type: string; key: string };
+          return v.site === 'YouTube' && v.type === 'Trailer';
+        });
+        if (trailer) setTrailerKey((trailer as { key: string }).key);
       })
-      .catch((err) => console.error('Error fetching movie videos:', err));
+      .catch((_err: unknown) =>
+        console.error('Error fetching movie videos:', _err)
+      );
   }, [tmdbId]);
 
   useEffect(() => {
@@ -91,7 +101,9 @@ export default function TMDbMovieDetailPage() {
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/movie/${tmdbId}/credits`)
       .then((res) => setCredits(res.data))
-      .catch((err) => console.error('Error fetching movie credits:', err));
+      .catch((_err: unknown) =>
+        console.error('Error fetching movie credits:', _err)
+      );
   }, [tmdbId]);
 
   useEffect(() => {
@@ -99,7 +111,9 @@ export default function TMDbMovieDetailPage() {
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${tmdbId}`)
       .then((res) => setReviews(res.data))
-      .catch((err) => console.error('Error fetching reviews:', err));
+      .catch((_err: unknown) =>
+        console.error('Error fetching reviews:', _err)
+      );
   }, [tmdbId, refresh]);
 
   const handleReviewSubmit = async (e: FormEvent) => {
@@ -119,7 +133,7 @@ export default function TMDbMovieDetailPage() {
       setNewRating(0);
       setNewComment('');
       setRefresh(!refresh);
-    } catch (err) {
+    } catch (_err: unknown) {
       setError('Error submitting review');
     }
   };
@@ -140,7 +154,7 @@ export default function TMDbMovieDetailPage() {
       );
       setEditingReviewId(null);
       setRefresh(!refresh);
-    } catch (err) {
+    } catch (_err: unknown) {
       setError('Error updating review');
     }
   };
@@ -156,7 +170,7 @@ export default function TMDbMovieDetailPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRefresh(!refresh);
-    } catch (err) {
+    } catch (_err: unknown) {
       setError('Error deleting review');
     }
   };
@@ -248,7 +262,7 @@ export default function TMDbMovieDetailPage() {
           {/* Cast & Crew */}
           {credits?.cast && credits.cast.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-yellow-400 mb-4">Cast & Crew</h2>
+              <h2 className="text-3xl font-bold text-yellow-400 mb-4">Cast &amp; Crew</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {credits.cast.slice(0, 8).map((member) => {
                   const profileUrl = member.profile_path
