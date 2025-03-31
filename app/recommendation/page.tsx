@@ -24,7 +24,8 @@ export default function RecommendationPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/structured`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/dashboard-ai`;
+
       if (prompt && prompt.trim() !== '') {
         url += `?prompt=${encodeURIComponent(prompt.trim())}`;
       }
