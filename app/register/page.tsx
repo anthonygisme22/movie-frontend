@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import axios from 'axios';
 import Link from 'next/link';
 
 export default function RegisterPage() {
@@ -8,15 +9,40 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+
     if (password !== confirm) {
       alert('Passwords do not match!');
       return;
     }
-    console.log('Registering with:', { username, email, password });
-    // Your registration logic here
+
+    const userData = { username, email, password };
+    console.log('Registering with:', userData);
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`,
+        userData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('Registration successful:', response.data);
+      setSuccess('Registration successful! You can now log in.');
+      // Optionally, you could redirect the user to the login page:
+      // router.push('/login');
+    } catch (err: any) {
+      console.error('Registration error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -59,6 +85,8 @@ export default function RegisterPage() {
             Register
           </button>
         </form>
+        {error && <p className="mt-4 text-center text-red-500 font-medium">{error}</p>}
+        {success && <p className="mt-4 text-center text-green-500 font-medium">{success}</p>}
         <p className="mt-4 text-center text-gray-700">
           Already have an account?{' '}
           <Link href="/login" className="text-yellow-500 hover:underline">
