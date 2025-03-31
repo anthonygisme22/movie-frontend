@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useContext, FormEvent } from 'react';
 import axios from 'axios';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
+// Adjust the AuthContext import path to your setup
 import { AuthContext } from '../context/AuthContext';
 
 interface AIRecommendation {
@@ -14,23 +14,23 @@ interface AIRecommendation {
 }
 
 export default function RecommendationPage() {
+  // We'll assume your AuthContext provides `user` or a way to tell if the user is logged in
   const { user } = useContext(AuthContext);
 
-  // For AI-based recommendations
+  // ─────────────────────────────────────────────────────────────────────
+  // AI-BASED RECOMMENDATIONS (Public)
+  // ─────────────────────────────────────────────────────────────────────
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [aiMessage, setAiMessage] = useState(''); // fallback if the AI response is raw text
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
 
-  // For personal recommendations (requires login)
-  const [personalRecommendations, setPersonalRecommendations] = useState<AIRecommendation[]>([]);
-  const [personalLoading, setPersonalLoading] = useState(false);
-  const [personalError, setPersonalError] = useState('');
-
-  // Fetch AI recommendations. It attempts to parse the result if returned as a string.
+  // POST to /api/recommendations/ai
   const fetchAIRecommendations = async (prompt: string) => {
     setAiLoading(true);
     setAiError('');
+    setAiMessage('');
     setAiRecommendations([]);
     try {
       const res = await axios.post(
@@ -39,24 +39,25 @@ export default function RecommendationPage() {
         { headers: { 'Content-Type': 'application/json' } }
       );
       let data = res.data.recommendations;
-      // If the response is a string, try to parse it as JSON
+      // If it's a string, try parsing as JSON
       if (typeof data === 'string') {
         try {
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             data = parsed;
+          } else {
+            // If not an array, store as fallback message
+            setAiMessage(data);
+            return;
           }
-        } catch (e) {
-          // If parsing fails, leave data as-is.
-          console.error('Error parsing AI response JSON:', e);
+        } catch (err) {
+          // If parse fails, store raw text
+          setAiMessage(data);
+          return;
         }
       }
-      // If data is an array, update state; otherwise, set error.
-      if (Array.isArray(data)) {
-        setAiRecommendations(data);
-      } else {
-        setAiError('AI response was not in the expected format.');
-      }
+      // If we get here, data should be an array
+      setAiRecommendations(data);
     } catch (err: any) {
       console.error('Error fetching AI recommendations:', err.response?.data || err.message);
       setAiError(err.response?.data?.message || 'Error fetching AI recommendations');
@@ -71,16 +72,27 @@ export default function RecommendationPage() {
     fetchAIRecommendations(aiPrompt.trim());
   };
 
-  // Fetch personal recommendations (requires login)
+  // ─────────────────────────────────────────────────────────────────────
+  // PERSONAL RECOMMENDATIONS (Requires Login)
+  // ─────────────────────────────────────────────────────────────────────
+  const [personalRecommendations, setPersonalRecommendations] = useState<AIRecommendation[]>([]);
+  const [personalError, setPersonalError] = useState('');
+  const [personalLoading, setPersonalLoading] = useState(false);
+
+  // GET /api/recommendations/personal (needs token)
   const fetchPersonalRecommendations = async () => {
-    if (!user) return;
+    if (!user) return; // if not logged in, skip
     setPersonalLoading(true);
     setPersonalError('');
     try {
+      // If you store token in localStorage, retrieve it:
       const token = localStorage.getItem('token');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/personal`, { headers });
+      // Expecting { recommendations: AIRecommendation[] }
       setPersonalRecommendations(response.data.recommendations || []);
     } catch (err: any) {
       console.error('Error fetching personal recommendations:', err.response?.data || err.message);
@@ -90,6 +102,7 @@ export default function RecommendationPage() {
     }
   };
 
+  // If user is logged in, fetch personal recs on mount or whenever user changes
   useEffect(() => {
     if (user) {
       fetchPersonalRecommendations();
@@ -100,7 +113,9 @@ export default function RecommendationPage() {
     <div className="min-h-screen bg-blue-700 text-white p-6">
       <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">Movie Recommendations</h1>
 
-      {/* AI-Based Recommendations Section */}
+      {/* ──────────────────────────────────────────────────────────
+         AI-BASED RECOMMENDATIONS SECTION
+         ────────────────────────────────────────────────────────── */}
       <form onSubmit={handleAIPromptSubmit} className="mb-6 flex justify-center">
         <input
           type="text"
@@ -122,14 +137,18 @@ export default function RecommendationPage() {
       ) : aiError ? (
         <p className="text-center text-red-400 text-xl">{aiError}</p>
       ) : aiRecommendations.length > 0 ? (
+        // We have an array of recommendations
         <>
           <h2 className="text-2xl text-yellow-300 mb-4">
             Here are some recommendations for: &quot;{aiPrompt}&quot;
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {aiRecommendations.map((rec, index) => {
+              // Validate or fallback for the poster path
               const posterUrl =
-                rec.poster_path && rec.poster_path.trim() !== '' ? rec.poster_path : '/no-image.png';
+                rec.poster_path && rec.poster_path.startsWith('http')
+                  ? rec.poster_path
+                  : '/no-image.png';
               return (
                 <div key={index} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
                   <Image
@@ -140,7 +159,7 @@ export default function RecommendationPage() {
                     className="w-full h-64 object-cover mb-4 rounded"
                   />
                   <h2 className="text-xl font-bold text-yellow-400 mb-2">{rec.title}</h2>
-                  <p className="text-sm text-gray-200 mb-2">{rec.reason || 'Recommended based on your prompt.'}</p>
+                  <p className="text-sm text-gray-200 mb-2">{rec.reason || ''}</p>
                   <Link
                     href={`/movies/tmdb/${encodeURIComponent(rec.title)}`}
                     className="inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
@@ -152,13 +171,24 @@ export default function RecommendationPage() {
             })}
           </div>
         </>
+      ) : aiMessage ? (
+        // The AI response was raw text
+        <>
+          <h2 className="text-2xl text-yellow-300 mb-4">
+            Here are some recommendations for: &quot;{aiPrompt}&quot;
+          </h2>
+          <div className="bg-blue-800 p-4 rounded whitespace-pre-wrap">{aiMessage}</div>
+        </>
       ) : (
+        // If we haven't asked yet or no data returned
         <p className="text-center text-gray-200">No AI recommendations yet.</p>
       )}
 
       <hr className="my-8 border-yellow-400" />
 
-      {/* Personal Recommendations Section */}
+      {/* ──────────────────────────────────────────────────────────
+         PERSONAL RECOMMENDATIONS SECTION
+         ────────────────────────────────────────────────────────── */}
       {!user ? (
         <p className="text-center text-xl text-yellow-300">
           Please <Link href="/login" className="underline">log in</Link> to see your personal recommendations.
@@ -175,7 +205,9 @@ export default function RecommendationPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {personalRecommendations.map((rec, index) => {
               const posterUrl =
-                rec.poster_path && rec.poster_path.trim() !== '' ? rec.poster_path : '/no-image.png';
+                rec.poster_path && rec.poster_path.startsWith('http')
+                  ? rec.poster_path
+                  : '/no-image.png';
               return (
                 <div key={index} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
                   <Image
