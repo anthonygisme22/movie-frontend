@@ -10,7 +10,7 @@ interface LocalMovieRecord {
   id: number;
   title: string;
   year: number;
-  rating: number; // your numeric rating from the DB
+  rating: number; // Your numeric rating from the DB
   bakedscale: string;
 }
 
@@ -21,14 +21,14 @@ interface TMDbMovieData {
   release_date: string;
   vote_average: number;
   overview: string;
-  localRating?: number; // added to store your local rating
+  localRating?: number; // Will store your local rating
 }
 
 // Optional: Use a simple cache to avoid refetching TMDb data for the same title.
 const tmdbCache: Record<string, TMDbMovieData> = {};
 
 export default function MyRatingsPage() {
-  const [localMovies, setLocalMovies] = useState<LocalMovieRecord[]>([]);
+  // Removed localMovies state because it was unused.
   const [displayMovies, setDisplayMovies] = useState<TMDbMovieData[]>([]);
   const [filteredMovies, setFilteredMovies] = useState<TMDbMovieData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,13 +40,8 @@ export default function MyRatingsPage() {
   useEffect(() => {
     async function fetchMyRatings() {
       try {
-        // Fetch local movie records from your backend (which includes your rating)
         const res = await axios.get<LocalMovieRecord[]>(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`);
-        setLocalMovies(res.data);
-
-        // For each local movie, fetch TMDb data by title and attach the local rating
         const promises = res.data.map(async (localMovie) => {
-          // Use cached result if available
           if (tmdbCache[localMovie.title]) {
             const movie = tmdbCache[localMovie.title];
             return { ...movie, localRating: localMovie.rating };
@@ -61,7 +56,7 @@ export default function MyRatingsPage() {
               tmdbCache[localMovie.title] = tmdbMovie;
               return { ...tmdbMovie, localRating: localMovie.rating };
             }
-          } catch (_err: unknown) {
+          } catch {
             return null;
           }
           return null;
@@ -69,9 +64,9 @@ export default function MyRatingsPage() {
         const results = await Promise.all(promises);
         const validMovies = results.filter((movie): movie is TMDbMovieData => movie !== null);
         setDisplayMovies(validMovies);
-        // Apply default filter: Top 25 (highest ratings)
+        // Apply default filter: Top 25
         applyFilter('top', validMovies);
-      } catch (e) {
+      } catch {
         setError('Error fetching local movies');
       } finally {
         setLoading(false);
@@ -80,17 +75,17 @@ export default function MyRatingsPage() {
     fetchMyRatings();
   }, []);
 
-  // Function to apply a filter based on your local ratings
+  // Function to apply a filter based on your local ratings.
   const applyFilter = (filter: 'top' | 'bottom' | 'all', moviesData?: TMDbMovieData[]) => {
     setActiveFilter(filter);
     const movies = moviesData || displayMovies;
     let sorted: TMDbMovieData[];
     if (filter === 'top') {
-      // Sort descending: highest localRating first
+      // Sort descending: highest localRating first.
       sorted = [...movies].sort((a, b) => (b.localRating || 0) - (a.localRating || 0));
       setFilteredMovies(sorted.slice(0, 25));
     } else if (filter === 'bottom') {
-      // Sort ascending: lowest localRating first
+      // Sort ascending: lowest localRating first.
       sorted = [...movies].sort((a, b) => (a.localRating || 0) - (b.localRating || 0));
       setFilteredMovies(sorted.slice(0, 25));
     } else {
@@ -98,12 +93,11 @@ export default function MyRatingsPage() {
     }
   };
 
-  // Handle search input changes. This filters the currently displayed movies by title.
+  // Handle search input changes.
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
     if (term === '') {
-      // If search is empty, reapply the current filter
       applyFilter(activeFilter);
     } else {
       const lowerTerm = term.toLowerCase();
@@ -132,7 +126,6 @@ export default function MyRatingsPage() {
   return (
     <div className="min-h-screen bg-blue-700 text-white p-6">
       <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">My Ratings</h1>
-      
       {/* Search Input */}
       <div className="max-w-lg mx-auto mb-8">
         <input
@@ -143,29 +136,33 @@ export default function MyRatingsPage() {
           className="w-full p-3 border border-blue-300 rounded shadow focus:outline-none focus:ring focus:ring-blue-300 transition-all"
         />
       </div>
-      
       {/* Filter Buttons */}
       <div className="flex justify-center space-x-4 mb-6">
         <button
           onClick={() => applyFilter('top')}
-          className={`px-4 py-2 rounded ${activeFilter === 'top' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
+          className={`px-4 py-2 rounded ${
+            activeFilter === 'top' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'
+          }`}
         >
           Top 25
         </button>
         <button
           onClick={() => applyFilter('bottom')}
-          className={`px-4 py-2 rounded ${activeFilter === 'bottom' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
+          className={`px-4 py-2 rounded ${
+            activeFilter === 'bottom' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'
+          }`}
         >
           Bottom 25
         </button>
         <button
           onClick={() => applyFilter('all')}
-          className={`px-4 py-2 rounded ${activeFilter === 'all' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
+          className={`px-4 py-2 rounded ${
+            activeFilter === 'all' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'
+          }`}
         >
           All Movies
         </button>
       </div>
-      
       {/* Movies Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMovies.map((movie) => (
