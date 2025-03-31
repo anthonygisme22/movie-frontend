@@ -5,7 +5,7 @@ import { useState, useEffect, useContext, FormEvent } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AuthContext } from '../context/AuthContext'; // Adjust path as needed
+import { AuthContext } from '../context/AuthContext';
 
 interface AIRecommendation {
   title: string;
@@ -16,10 +16,9 @@ interface AIRecommendation {
 export default function RecommendationPage() {
   const { user } = useContext(AuthContext);
 
-  // For ChatGPT/AI-based recommendations
+  // For AI-based recommendations
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
-  const [aiMessage, setAiMessage] = useState(''); // fallback if we can't parse JSON
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
 
@@ -28,31 +27,35 @@ export default function RecommendationPage() {
   const [personalLoading, setPersonalLoading] = useState(false);
   const [personalError, setPersonalError] = useState('');
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // 1. Fetch AI-based recommendations (no login required)
-  // ──────────────────────────────────────────────────────────────────────────
+  // Fetch AI recommendations. It attempts to parse the result if returned as a string.
   const fetchAIRecommendations = async (prompt: string) => {
     setAiLoading(true);
     setAiError('');
-    setAiMessage('');
     setAiRecommendations([]);
-
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/ai`,
         { query: prompt },
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
+        { headers: { 'Content-Type': 'application/json' } }
       );
-
-      // The backend tries to return an array of objects if possible.
-      // If it's not an array, we store it in aiMessage as fallback text.
-      const data = res.data.recommendations;
+      let data = res.data.recommendations;
+      // If the response is a string, try to parse it as JSON
+      if (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            data = parsed;
+          }
+        } catch (e) {
+          // If parsing fails, leave data as-is.
+          console.error('Error parsing AI response JSON:', e);
+        }
+      }
+      // If data is an array, update state; otherwise, set error.
       if (Array.isArray(data)) {
         setAiRecommendations(data);
-      } else if (typeof data === 'string') {
-        setAiMessage(data);
+      } else {
+        setAiError('AI response was not in the expected format.');
       }
     } catch (err: any) {
       console.error('Error fetching AI recommendations:', err.response?.data || err.message);
@@ -68,9 +71,7 @@ export default function RecommendationPage() {
     fetchAIRecommendations(aiPrompt.trim());
   };
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // 2. Fetch Personal Recommendations (requires login)
-  // ──────────────────────────────────────────────────────────────────────────
+  // Fetch personal recommendations (requires login)
   const fetchPersonalRecommendations = async () => {
     if (!user) return;
     setPersonalLoading(true);
@@ -78,9 +79,7 @@ export default function RecommendationPage() {
     try {
       const token = localStorage.getItem('token');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) headers.Authorization = `Bearer ${token}`;
       const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/recommendations/personal`, { headers });
       setPersonalRecommendations(response.data.recommendations || []);
     } catch (err: any) {
@@ -97,14 +96,11 @@ export default function RecommendationPage() {
     }
   }, [user]);
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-blue-700 text-white p-6">
       <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">Movie Recommendations</h1>
 
-      {/* AI-Based Recommendations (Open to Everyone) */}
+      {/* AI-Based Recommendations Section */}
       <form onSubmit={handleAIPromptSubmit} className="mb-6 flex justify-center">
         <input
           type="text"
@@ -133,9 +129,7 @@ export default function RecommendationPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {aiRecommendations.map((rec, index) => {
               const posterUrl =
-                rec.poster_path && rec.poster_path.trim() !== ''
-                  ? rec.poster_path
-                  : '/no-image.png';
+                rec.poster_path && rec.poster_path.trim() !== '' ? rec.poster_path : '/no-image.png';
               return (
                 <div key={index} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
                   <Image
@@ -146,7 +140,7 @@ export default function RecommendationPage() {
                     className="w-full h-64 object-cover mb-4 rounded"
                   />
                   <h2 className="text-xl font-bold text-yellow-400 mb-2">{rec.title}</h2>
-                  <p className="text-sm text-gray-200 mb-2">{rec.reason || ''}</p>
+                  <p className="text-sm text-gray-200 mb-2">{rec.reason || 'Recommended based on your prompt.'}</p>
                   <Link
                     href={`/movies/tmdb/${encodeURIComponent(rec.title)}`}
                     className="inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
@@ -158,20 +152,13 @@ export default function RecommendationPage() {
             })}
           </div>
         </>
-      ) : aiMessage ? (
-        <>
-          <h2 className="text-2xl text-yellow-300 mb-4">
-            Here are some recommendations for: &quot;{aiPrompt}&quot;
-          </h2>
-          <div className="bg-blue-800 p-4 rounded whitespace-pre-wrap">{aiMessage}</div>
-        </>
       ) : (
         <p className="text-center text-gray-200">No AI recommendations yet.</p>
       )}
 
       <hr className="my-8 border-yellow-400" />
 
-      {/* Personal Recommendations (Requires Login) */}
+      {/* Personal Recommendations Section */}
       {!user ? (
         <p className="text-center text-xl text-yellow-300">
           Please <Link href="/login" className="underline">log in</Link> to see your personal recommendations.

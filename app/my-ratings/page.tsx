@@ -1,118 +1,209 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
 
-interface Rating {
+// Define interfaces for local movie records and TMDb data
+interface LocalMovieRecord {
   id: number;
   title: string;
-  rating: number;
-  poster_path?: string;
-  // add other fields as necessary
+  year: number;
+  rating: number; // your numeric rating from the DB
+  bakedscale: string;
 }
 
+interface TMDbMovieData {
+  id: number;
+  poster_path: string | null;
+  title: string;
+  release_date: string;
+  vote_average: number;
+  overview: string;
+  localRating?: number; // added to store your local rating
+}
+
+// Optional: Use a simple cache to avoid refetching TMDb data for the same title.
+const tmdbCache: Record<string, TMDbMovieData> = {};
+
 export default function MyRatingsPage() {
-  const [ratings, setRatings] = useState<Rating[]>([]);
-  const [filteredRatings, setFilteredRatings] = useState<Rating[]>([]);
+  const [localMovies, setLocalMovies] = useState<LocalMovieRecord[]>([]);
+  const [displayMovies, setDisplayMovies] = useState<TMDbMovieData[]>([]);
+  const [filteredMovies, setFilteredMovies] = useState<TMDbMovieData[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<'top' | 'bottom' | 'all'>('top');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Function to fetch all ratings from the backend
-  const fetchRatings = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/ratings`);
-      // Assume the API returns an array of ratings in response.data.ratings
-      const fetchedRatings: Rating[] = response.data.ratings;
-      setRatings(fetchedRatings);
-      applyFilter('top', fetchedRatings); // Default filter: Top 25
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error fetching ratings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to filter ratings
-  const applyFilter = (filter: 'top' | 'bottom' | 'all', ratingsData: Rating[] = ratings) => {
-    setActiveFilter(filter);
-    if (filter === 'all') {
-      setFilteredRatings(ratingsData);
-    } else if (filter === 'top') {
-      // Sort in descending order by rating and take the first 25
-      const sorted = [...ratingsData].sort((a, b) => b.rating - a.rating);
-      setFilteredRatings(sorted.slice(0, 25));
-    } else if (filter === 'bottom') {
-      // Sort in ascending order by rating and take the first 25
-      const sorted = [...ratingsData].sort((a, b) => a.rating - b.rating);
-      setFilteredRatings(sorted.slice(0, 25));
-    }
-  };
-
+  // Fetch local movie records and their corresponding TMDb data.
   useEffect(() => {
-    fetchRatings();
+    async function fetchMyRatings() {
+      try {
+        // Fetch local movie records from your backend (which includes your rating)
+        const res = await axios.get<LocalMovieRecord[]>(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`);
+        setLocalMovies(res.data);
+
+        // For each local movie, fetch TMDb data by title and attach the local rating
+        const promises = res.data.map(async (localMovie) => {
+          // Use cached result if available
+          if (tmdbCache[localMovie.title]) {
+            const movie = tmdbCache[localMovie.title];
+            return { ...movie, localRating: localMovie.rating };
+          }
+          try {
+            const searchRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/tmdb/search`, {
+              params: { query: localMovie.title },
+            });
+            const results = searchRes.data.results;
+            if (results && results.length > 0) {
+              const tmdbMovie = results[0] as TMDbMovieData;
+              tmdbCache[localMovie.title] = tmdbMovie;
+              return { ...tmdbMovie, localRating: localMovie.rating };
+            }
+          } catch (_err: unknown) {
+            return null;
+          }
+          return null;
+        });
+        const results = await Promise.all(promises);
+        const validMovies = results.filter((movie): movie is TMDbMovieData => movie !== null);
+        setDisplayMovies(validMovies);
+        // Apply default filter: Top 25 (highest ratings)
+        applyFilter('top', validMovies);
+      } catch (e) {
+        setError('Error fetching local movies');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMyRatings();
   }, []);
+
+  // Function to apply a filter based on your local ratings
+  const applyFilter = (filter: 'top' | 'bottom' | 'all', moviesData?: TMDbMovieData[]) => {
+    setActiveFilter(filter);
+    const movies = moviesData || displayMovies;
+    let sorted: TMDbMovieData[];
+    if (filter === 'top') {
+      // Sort descending: highest localRating first
+      sorted = [...movies].sort((a, b) => (b.localRating || 0) - (a.localRating || 0));
+      setFilteredMovies(sorted.slice(0, 25));
+    } else if (filter === 'bottom') {
+      // Sort ascending: lowest localRating first
+      sorted = [...movies].sort((a, b) => (a.localRating || 0) - (b.localRating || 0));
+      setFilteredMovies(sorted.slice(0, 25));
+    } else {
+      setFilteredMovies(movies);
+    }
+  };
+
+  // Handle search input changes. This filters the currently displayed movies by title.
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (term === '') {
+      // If search is empty, reapply the current filter
+      applyFilter(activeFilter);
+    } else {
+      const lowerTerm = term.toLowerCase();
+      setFilteredMovies(
+        displayMovies.filter((movie) => movie.title.toLowerCase().includes(lowerTerm))
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-blue-700 text-white p-6 flex items-center justify-center">
+        <p>Loading your rated movies...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-blue-700 text-white p-6 flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-blue-700 text-white p-6">
       <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">My Ratings</h1>
       
+      {/* Search Input */}
+      <div className="max-w-lg mx-auto mb-8">
+        <input
+          type="text"
+          placeholder="Search your rated movies..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="w-full p-3 border border-blue-300 rounded shadow focus:outline-none focus:ring focus:ring-blue-300 transition-all"
+        />
+      </div>
+      
       {/* Filter Buttons */}
       <div className="flex justify-center space-x-4 mb-6">
-        <button 
+        <button
           onClick={() => applyFilter('top')}
           className={`px-4 py-2 rounded ${activeFilter === 'top' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
         >
           Top 25
         </button>
-        <button 
+        <button
           onClick={() => applyFilter('bottom')}
           className={`px-4 py-2 rounded ${activeFilter === 'bottom' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
         >
           Bottom 25
         </button>
-        <button 
+        <button
           onClick={() => applyFilter('all')}
           className={`px-4 py-2 rounded ${activeFilter === 'all' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-black'}`}
         >
           All Movies
         </button>
       </div>
-
-      {loading ? (
-        <p className="text-center text-xl">Loading ratings...</p>
-      ) : error ? (
-        <p className="text-center text-red-400 text-xl">{error}</p>
-      ) : filteredRatings.length === 0 ? (
-        <p className="text-center text-xl">No ratings found.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRatings.map((movie) => (
-            <div key={movie.id} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
-              <Image
-                src={movie.poster_path ? movie.poster_path : '/no-image.png'}
-                alt={movie.title}
-                width={500}
-                height={600}
-                className="w-full h-64 object-cover mb-4 rounded"
-              />
-              <h2 className="text-xl font-bold text-yellow-400 mb-2">{movie.title}</h2>
-              <p className="text-sm text-gray-200">Rating: {movie.rating}</p>
-              <Link
-                href={`/movies/tmdb/${movie.id}`}
-                className="mt-3 inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
-              >
-                View Details
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
+      
+      {/* Movies Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredMovies.map((movie) => (
+          <div
+            key={movie.id}
+            className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition"
+          >
+            <Image
+              src={
+                movie.poster_path
+                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                  : '/no-image.png'
+              }
+              alt={movie.title}
+              width={400}
+              height={600}
+              className="w-full h-64 object-cover mb-4 rounded"
+            />
+            <h2 className="text-xl font-semibold text-white mb-2">{movie.title}</h2>
+            <p className="text-sm text-gray-200 mb-1">
+              <strong>Release:</strong> {movie.release_date}
+            </p>
+            <p className="text-sm text-gray-200 mb-1">
+              <strong>TMDb Rating:</strong> {movie.vote_average}
+            </p>
+            <p className="text-sm text-gray-200 mb-1">
+              <strong>Your Rating:</strong> {movie.localRating}
+            </p>
+            <p className="text-sm text-gray-200 mb-1 line-clamp-3">{movie.overview}</p>
+            <Link
+              href={`/movies/tmdb/${movie.id}`}
+              className="mt-3 inline-block bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
+            >
+              View Details
+            </Link>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
