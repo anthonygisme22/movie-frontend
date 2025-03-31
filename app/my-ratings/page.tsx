@@ -61,9 +61,12 @@ export default function MyRatingsPage() {
           return null;
         });
         const results = await Promise.all(promises);
-        // Ensure we only include movies that are not null and have a defined localRating
-        const validMovies = results.filter((movie): movie is TMDbMovieData & { localRating: number } => movie !== null && movie.localRating !== undefined);
-        setDisplayMovies(validMovies.filter((movie): movie is TMDbMovieData & { localRating: number } => movie !== null && movie.localRating !== undefined));
+        // Filter out movies that are null and ensure localRating is defined.
+        const validMovies = results.filter(
+          (movie): movie is TMDbMovieData & { localRating: number } =>
+            movie !== null && movie.localRating !== undefined
+        );
+        setDisplayMovies(validMovies);
         // Apply default filter: Top 25
         applyFilter('top', validMovies);
       } catch {
@@ -75,7 +78,7 @@ export default function MyRatingsPage() {
     fetchMyRatings();
   }, []);
 
-  // Function to apply a filter based on your local ratings.
+  // Function to apply a filter (top, bottom, or all) on a given list (or full displayMovies if not provided).
   const applyFilter = (filter: 'top' | 'bottom' | 'all', moviesData?: TMDbMovieData[]) => {
     setActiveFilter(filter);
     const movies = moviesData || displayMovies;
@@ -93,18 +96,18 @@ export default function MyRatingsPage() {
     }
   };
 
-  // Handle search input changes.
+  // Update the search term and reapply the active filter to the filtered base list.
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    if (term === '') {
-      applyFilter(activeFilter);
-    } else {
+    // Start with the full list of movies.
+    let base = displayMovies;
+    if (term.trim() !== '') {
       const lowerTerm = term.toLowerCase();
-      setFilteredMovies(
-        displayMovies.filter((movie) => movie.title.toLowerCase().includes(lowerTerm))
-      );
+      base = displayMovies.filter((movie) => movie.title.toLowerCase().includes(lowerTerm));
     }
+    // Reapply the current filter to the base list.
+    applyFilter(activeFilter, base);
   };
 
   if (loading) {
@@ -166,10 +169,7 @@ export default function MyRatingsPage() {
       {/* Movies Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMovies.map((movie) => (
-          <div
-            key={movie.id}
-            className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition"
-          >
+          <div key={movie.id} className="bg-blue-800 p-4 rounded shadow hover:shadow-lg transition">
             <Image
               src={
                 movie.poster_path
