@@ -28,7 +28,6 @@ interface TMDbMovieData {
 const tmdbCache: Record<string, TMDbMovieData> = {};
 
 export default function MyRatingsPage() {
-  // Removed localMovies state because it was unused.
   const [displayMovies, setDisplayMovies] = useState<TMDbMovieData[]>([]);
   const [filteredMovies, setFilteredMovies] = useState<TMDbMovieData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,8 +61,9 @@ export default function MyRatingsPage() {
           return null;
         });
         const results = await Promise.all(promises);
-        const validMovies = results.filter((movie): movie is TMDbMovieData => movie !== null);
-        setDisplayMovies(validMovies);
+        // Ensure we only include movies that are not null and have a defined localRating
+        const validMovies = results.filter((movie): movie is TMDbMovieData & { localRating: number } => movie !== null && movie.localRating !== undefined);
+        setDisplayMovies(validMovies.filter((movie): movie is TMDbMovieData & { localRating: number } => movie !== null && movie.localRating !== undefined));
         // Apply default filter: Top 25
         applyFilter('top', validMovies);
       } catch {
@@ -82,11 +82,11 @@ export default function MyRatingsPage() {
     let sorted: TMDbMovieData[];
     if (filter === 'top') {
       // Sort descending: highest localRating first.
-      sorted = [...movies].sort((a, b) => (b.localRating || 0) - (a.localRating || 0));
+      sorted = [...movies].sort((a, b) => (b.localRating! - a.localRating!));
       setFilteredMovies(sorted.slice(0, 25));
     } else if (filter === 'bottom') {
       // Sort ascending: lowest localRating first.
-      sorted = [...movies].sort((a, b) => (a.localRating || 0) - (b.localRating || 0));
+      sorted = [...movies].sort((a, b) => (a.localRating! - b.localRating!));
       setFilteredMovies(sorted.slice(0, 25));
     } else {
       setFilteredMovies(movies);
