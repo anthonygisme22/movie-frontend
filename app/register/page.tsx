@@ -39,6 +39,7 @@ export default function RegisterPage() {
       setSuccess('Registration successful! You can now log in.');
       // Optionally, you could redirect the user to the login page:
       // router.push('/login');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Registration error:', err.response?.data || err.message);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
